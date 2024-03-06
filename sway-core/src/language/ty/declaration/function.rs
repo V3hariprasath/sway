@@ -7,7 +7,7 @@ use std::{
 use sha2::{Digest, Sha256};
 use sway_error::handler::{ErrorEmitted, Handler};
 
-use crate::{language::CallPath, semantic_analysis::type_check_context::MonomorphizeHelper};
+use crate::{language::CallPath, semantic_analysis::type_check_context::MonomorphizeHelper, transform::AttributeKind};
 
 use crate::{
     decl_engine::*,
@@ -411,6 +411,10 @@ impl TyFunctionDecl {
             INLINE_ALWAYS_NAME => Some(Inline::Always),
             _ => None,
         }
+    }
+
+    pub fn is_fallback(&self) -> bool {
+        self.attributes.contains_key(&AttributeKind::Fallback)
     }
 
     /// Whether or not this function describes a program entry point.

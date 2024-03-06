@@ -1,8 +1,9 @@
 use crate::{
-    decl_engine::{DeclId, DeclRefFunction},
+    decl_engine::{DeclEngineGet, DeclId, DeclRefFunction},
     language::{ty, Visibility},
     metadata::MetadataManager,
     semantic_analysis::namespace,
+    transform::AttributeKind,
     type_system::TypeId,
     types::{LogId, MessageId},
     Engines,
@@ -138,6 +139,7 @@ pub(super) fn compile_contract(
         declarations,
     )
     .map_err(|err| vec![err])?;
+
     for decl in abi_entries {
         compile_abi_method(
             context,
@@ -149,6 +151,32 @@ pub(super) fn compile_contract(
             engines,
         )?;
     }
+
+    // Fallback function needs to be compiled
+
+    for decl in declarations {
+        match decl {
+            ty::TyDecl::FunctionDecl(decl) => {
+                let decl = engines.de().get(&decl.decl_id);
+                if decl.attributes.get(&AttributeKind::Fallback).is_some() {
+                    compile_fn(
+                        engines,
+                        context,
+                        &mut md_mgr,
+                        module,
+                        &decl,
+                        false,
+                        None,
+                        logged_types_map,
+                        messages_types_map,
+                        None,
+                    )?;
+                }
+            }
+            _ => {}
+        }
+    }
+
     compile_tests(
         engines,
         context,
@@ -417,6 +445,7 @@ fn compile_fn(
         purity,
         span,
         is_trait_method_dummy,
+        attributes,
         ..
     } = ast_fn_decl;
 
@@ -479,6 +508,8 @@ fn compile_fn(
         metadata = md_combine(context, &metadata, &inline_md_idx);
     }
 
+    let is_fallback = attributes.get(&AttributeKind::Fallback).is_some();
+
     let func = Function::new(
         context,
         module,
@@ -488,6 +519,7 @@ fn compile_fn(
         selector,
         *visibility == Visibility::Public,
         is_entry,
+        is_fallback,
         metadata,
     );
 

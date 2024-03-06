@@ -223,7 +223,7 @@ impl TyAstNode {
                     ..
                 } => {
                     let decl = decl_engine.get_function(decl_id);
-                    decl.visibility == Visibility::Public || decl.is_test()
+                    decl.visibility == Visibility::Public || decl.is_test() || decl.is_fallback()
                 }
                 TyAstNode {
                     content:
